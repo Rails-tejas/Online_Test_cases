@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Cases - Tejas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fdfcfb;
+            color: #3f3c3a;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 320px;
+            max-height: 400px;
+        }
+        .sidebar-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .sidebar-link.active {
+            background-color: #eaddd7;
+            color: #3f3c3a;
+            font-weight: 600;
+        }
+        .sidebar-link:hover {
+            background-color: #f2ece9;
+        }
+        .status-select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%233f3c3a%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 0.7rem center;
+            background-size: 0.65rem auto;
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="flex h-screen bg-[#fdfcfb]">
+        <aside id="sidebar" class="w-64 bg-[#f8f5f2] border-r border-[#eaddd7] p-4 flex-shrink-0">
+            <h1 class="text-2xl font-bold text-[#a18276] mb-6">Test Dashboard</h1>
+            <nav id="sidebar-nav" class="space-y-2">
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+            <header class="mb-8">
+                <h2 id="main-title" class="text-3xl font-bold text-gray-800 mb-2">Overall Progress</h2>
+                <p class="text-gray-500">This dashboard provides a real-time overview of your test cases. Add new test cases using the form below, and then manage their status in the table.</p>
+            </header>
+
+            <div id="dashboard-stats" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+                <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500">Total Cases</h3>
+                    <p id="total-stat" class="text-3xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500">Passed</h3>
+                    <p id="passed-stat" class="text-3xl font-bold text-green-600">0</p>
+                </div>
+                <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500">Failed</h3>
+                    <p id="failed-stat" class="text-3xl font-bold text-red-600">0</p>
+                </div>
+                <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500">Blocked</h3>
+                    <p id="blocked-stat" class="text-3xl font-bold text-yellow-600">0</p>
+                </div>
+                <div class="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                    <h3 class="text-sm font-medium text-gray-500">Not Run</h3>
+                    <p id="not-run-stat" class="text-3xl font-bold text-gray-400">0</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
+                <div class="chart-container mx-auto">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+            
+            <section id="add-test-case-section" class="mt-8 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Add New Test Case</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="new-id" class="block text-sm font-medium text-gray-700">Test Case ID (e.g., TC-001)</label>
+                        <input type="text" id="new-id" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="new-category" class="block text-sm font-medium text-gray-700">Category</label>
+                        <input type="text" id="new-category" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="new-group" class="block text-sm font-medium text-gray-700">Group</label>
+                        <input type="text" id="new-group" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="new-description" class="block text-sm font-medium text-gray-700">Description</label>
+                        <textarea id="new-description" rows="3" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"></textarea>
+                    </div>
+                </div>
+                <button id="add-test-case-btn" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-[#a18276] hover:bg-[#8a6b60] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#a18276]">
+                    Add Test Case
+                </button>
+            </section>
+
+            <section id="report-section" class="mt-8 bg-white p-4 md:p-6 rounded-lg shadow-sm border border-gray-200">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">Generate Report</h3>
+                <p class="text-gray-500 mb-4">Click the button below to generate a PDF report of all your current test cases and their statuses.</p>
+                <button id="generate-pdf-btn" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Generate PDF Report
+                </button>
+            </section>
+
+            <section id="test-case-section" class="mt-8">
+                 <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 w-24">ID</th>
+                                    <th scope="col" class="px-6 py-3">Description</th>
+                                    <th scope="col" class="px-6 py-3 w-48">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="test-case-table-body">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const testData = [];
+
+        const statusColors = {
+            'Passed': 'bg-green-100 text-green-800',
+            'Failed': 'bg-red-100 text-red-800',
+            'Blocked': 'bg-yellow-100 text-yellow-800',
+            'Not Run': 'bg-gray-100 text-gray-800',
+        };
+        
+        const chartColors = {
+            'Passed': '#16a34a',
+            'Failed': '#dc2626',
+            'Blocked': '#d97706',
+            'Not Run': '#9ca3af',
+        };
+
+        let myChart;
+        let currentFilter = 'All';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupSidebar();
+            render();
+            setupAddTestCaseForm();
+            setupPdfGeneration();
+        });
+        
+        function setupSidebar() {
+            const sidebarNav = document.getElementById('sidebar-nav');
+            const categories = ['All', ...new Set(testData.map(tc => tc.category))].sort();
+            
+            sidebarNav.innerHTML = categories.map(category => `
+                <a href="#" class="sidebar-link block px-4 py-2 rounded-md" data-category="${category}">${category}</a>
+            `).join('');
+            
+            sidebarNav.addEventListener('click', (e) => {
+                if (e.target.matches('.sidebar-link')) {
+                    e.preventDefault();
+                    currentFilter = e.target.dataset.category;
+                    render();
+                }
+            });
+        }
+        
+        function renderTable() {
+            const tableBody = document.getElementById('test-case-table-body');
+            const filteredData = currentFilter === 'All' 
+                ? testData 
+                : testData.filter(tc => tc.category === currentFilter);
+            
+            let currentGroup = '';
+            tableBody.innerHTML = filteredData.map(tc => {
+                let groupHeader = '';
+                if (tc.group !== currentGroup) {
+                    currentGroup = tc.group;
+                    groupHeader = `
+                        <tr class="bg-gray-50">
+                            <td colspan="3" class="px-6 py-3 font-semibold text-gray-900">${currentGroup}</td>
+                        </tr>
+                    `;
+                }
+                return groupHeader + `
+                    <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-gray-900">${tc.id}</td>
+                        <td class="px-6 py-4">${tc.description}</td>
+                        <td class="px-6 py-4">
+                            <select class="status-select w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ${statusColors[tc.status]}" data-id="${tc.id}">
+                                <option value="Not Run" ${tc.status === 'Not Run' ? 'selected' : ''}>Not Run</option>
+                                <option value="Passed" ${tc.status === 'Passed' ? 'selected' : ''}>Passed</option>
+                                <option value="Failed" ${tc.status === 'Failed' ? 'selected' : ''}>Failed</option>
+                                <option value="Blocked" ${tc.status === 'Blocked' ? 'selected' : ''}>Blocked</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tableBody.querySelectorAll('.status-select').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    const testCaseId = e.target.dataset.id;
+                    const newStatus = e.target.value;
+                    const testCase = testData.find(tc => tc.id === testCaseId);
+                    if (testCase) {
+                        testCase.status = newStatus;
+                        e.target.className = `status-select w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ${statusColors[newStatus]}`;
+                        render();
+                    }
+                });
+            });
+        }
+
+        function updateDashboard() {
+            const filteredData = currentFilter === 'All' 
+                ? testData 
+                : testData.filter(tc => tc.category === currentFilter);
+                
+            const stats = filteredData.reduce((acc, tc) => {
+                if (tc.status === 'Passed') acc.passed++;
+                else if (tc.status === 'Failed') acc.failed++;
+                else if (tc.status === 'Blocked') acc.blocked++;
+                else acc.notRun++;
+                return acc;
+            }, { passed: 0, failed: 0, blocked: 0, notRun: 0 });
+
+            document.getElementById('total-stat').textContent = filteredData.length;
+            document.getElementById('passed-stat').textContent = stats.passed;
+            document.getElementById('failed-stat').textContent = stats.failed;
+            document.getElementById('blocked-stat').textContent = stats.blocked;
+            document.getElementById('not-run-stat').textContent = stats.notRun;
+
+            const chartData = {
+                labels: ['Passed', 'Failed', 'Blocked', 'Not Run'],
+                datasets: [{
+                    label: 'Test Case Status',
+                    data: [stats.passed, stats.failed, stats.blocked, stats.notRun],
+                    backgroundColor: [
+                        chartColors['Passed'],
+                        chartColors['Failed'],
+                        chartColors['Blocked'],
+                        chartColors['Not Run'],
+                    ],
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            };
+
+            if (myChart) {
+                myChart.data = chartData;
+                myChart.update();
+            } else {
+                const ctx = document.getElementById('statusChart').getContext('2d');
+                myChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: chartData,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    boxWidth: 12,
+                                    padding: 20
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateActiveLink() {
+            document.querySelectorAll('.sidebar-link').forEach(link => {
+                link.classList.toggle('active', link.dataset.category === currentFilter);
+            });
+            document.getElementById('main-title').textContent = `${currentFilter} - Progress`;
+        }
+
+        function setupAddTestCaseForm() {
+            const addBtn = document.getElementById('add-test-case-btn');
+            const newIdInput = document.getElementById('new-id');
+            const newCategoryInput = document.getElementById('new-category');
+            const newGroupInput = document.getElementById('new-group');
+            const newDescriptionInput = document.getElementById('new-description');
+
+            addBtn.addEventListener('click', () => {
+                const id = newIdInput.value.trim();
+                const category = newCategoryInput.value.trim();
+                const group = newGroupInput.value.trim();
+                const description = newDescriptionInput.value.trim();
+
+                if (!id || !category || !group || !description) {
+                    alert('Please fill in all fields (ID, Category, Group, Description) to add a new test case.');
+                    return;
+                }
+
+                if (testData.some(tc => tc.id === id)) {
+                    alert('Test Case ID already exists. Please use a unique ID.');
+                    return;
+                }
+
+                const newTestCase = {
+                    id: id,
+                    category: category,
+                    group: group,
+                    description: description,
+                    status: 'Not Run'
+                };
+
+                testData.push(newTestCase);
+                testData.sort((a, b) => a.id.localeCompare(b.id));
+
+                newIdInput.value = '';
+                newCategoryInput.value = '';
+                newGroupInput.value = '';
+                newDescriptionInput.value = '';
+
+                setupSidebar();
+                render();
+            });
+        }
+
+        function setupPdfGeneration() {
+            const generatePdfBtn = document.getElementById('generate-pdf-btn');
+            generatePdfBtn.addEventListener('click', () => {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+
+                doc.setFontSize(22);
+                doc.text("Test Case Report", 14, 20);
+
+                const stats = testData.reduce((acc, tc) => {
+                    if (tc.status === 'Passed') acc.passed++;
+                    else if (tc.status === 'Failed') acc.failed++;
+                    else if (tc.status === 'Blocked') acc.blocked++;
+                    else acc.notRun++;
+                    return acc;
+                }, { passed: 0, failed: 0, blocked: 0, notRun: 0 });
+
+                doc.setFontSize(12);
+                doc.text(`Total Test Cases: ${testData.length}`, 14, 30);
+                doc.text(`Passed: ${stats.passed}`, 14, 37);
+                doc.text(`Failed: ${stats.failed}`, 14, 44);
+                doc.text(`Blocked: ${stats.blocked}`, 14, 51);
+                doc.text(`Not Run: ${stats.notRun}`, 14, 58);
+
+                const tableColumn = ["ID", "Description", "Category", "Group", "Status"];
+                const tableRows = [];
+
+                testData.forEach(tc => {
+                    const tcData = [
+                        tc.id,
+                        tc.description,
+                        tc.category,
+                        tc.group,
+                        tc.status
+                    ];
+                    tableRows.push(tcData);
+                });
+
+                doc.autoTable({
+                    head: [tableColumn],
+                    body: tableRows,
+                    startY: 70,
+                    styles: { fontSize: 8 },
+                    headStyles: { fillColor: [248, 245, 242] },
+                    alternateRowStyles: { fillColor: [253, 252, 251] },
+                    columnStyles: {
+                        0: { cellWidth: 20 },
+                        1: { cellWidth: 80 },
+                        2: { cellWidth: 30 },
+                        3: { cellWidth: 30 },
+                        4: { cellWidth: 20 }
+                    }
+                });
+
+                doc.save('test_case_report.pdf');
+            });
+        }
+
+        function render() {
+            updateActiveLink();
+            updateDashboard();
+            renderTable();
+        }
+
+    </script>
+</body>
+</html>
